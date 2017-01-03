@@ -23,7 +23,7 @@ The crypto is documented at https://github.com/ethereum/wiki/wiki/Web3-Secret-St
 
 */
 
-package crypto
+package accounts
 
 import (
 	"bytes"
@@ -31,12 +31,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"reflect"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/randentropy"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
@@ -45,69 +45,91 @@ import (
 
 const (
 	keyHeaderKDF = "scrypt"
-	// 2^18 / 8 / 1 uses 256MB memory and approx 1s CPU time on a modern CPU.
-	scryptN     = 1 << 18
-	scryptr     = 8
-	scryptp     = 1
-	scryptdkLen = 32
+
+	// StandardScryptN is the N parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptN = 1 << 18
+
+	// StandardScryptP is the P parameter of Scrypt encryption algorithm, using 256MB
+	// memory and taking approximately 1s CPU time on a modern processor.
+	StandardScryptP = 1
+
+	// LightScryptN is the N parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptN = 1 << 12
+
+	// LightScryptP is the P parameter of Scrypt encryption algorithm, using 4MB
+	// memory and taking approximately 100ms CPU time on a modern processor.
+	LightScryptP = 6
+
+	scryptR     = 8
+	scryptDKLen = 32
 )
 
 type keyStorePassphrase struct {
 	keysDirPath string
+	scryptN     int
+	scryptP     int
 }
 
-func NewKeyStorePassphrase(path string) KeyStore {
-	return &keyStorePassphrase{path}
-}
-
-func (ks keyStorePassphrase) GenerateNewKey(rand io.Reader, auth string) (key *Key, err error) {
-	return GenerateNewKeyDefault(ks, rand, auth)
-}
-
-func (ks keyStorePassphrase) GetKey(keyAddr common.Address, auth string) (key *Key, err error) {
-	keyBytes, keyId, err := decryptKeyFromFile(ks.keysDirPath, keyAddr, auth)
-	if err == nil {
-		key = &Key{
-			Id:         uuid.UUID(keyId),
-			Address:    keyAddr,
-			PrivateKey: ToECDSA(keyBytes),
-		}
+func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
+	// Load the key from the keystore and decrypt its contents
+	keyjson, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
 	}
-	return
+	key, err := DecryptKey(keyjson, auth)
+	if err != nil {
+		return nil, err
+	}
+	// Make sure we're really operating on the requested key (no swap attacks)
+	if key.Address != addr {
+		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+	}
+	return key, nil
 }
 
-func (ks keyStorePassphrase) Cleanup(keyAddr common.Address) (err error) {
-	return cleanup(ks.keysDirPath, keyAddr)
-}
-
-func (ks keyStorePassphrase) GetKeyAddresses() (addresses []common.Address, err error) {
-	return getKeyAddresses(ks.keysDirPath)
-}
-
-func (ks keyStorePassphrase) StoreKey(key *Key, auth string) (err error) {
-	authArray := []byte(auth)
-	salt := randentropy.GetEntropyCSPRNG(32)
-	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptr, scryptp, scryptdkLen)
+func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
+	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
 	}
+	return writeKeyFile(filename, keyjson)
+}
 
+func (ks keyStorePassphrase) JoinPath(filename string) string {
+	if filepath.IsAbs(filename) {
+		return filename
+	} else {
+		return filepath.Join(ks.keysDirPath, filename)
+	}
+}
+
+// EncryptKey encrypts a key using the specified scrypt parameters into a json
+// blob that can be decrypted later on.
+func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
+	authArray := []byte(auth)
+	salt := randentropy.GetEntropyCSPRNG(32)
+	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
+	if err != nil {
+		return nil, err
+	}
 	encryptKey := derivedKey[:16]
-	keyBytes := FromECDSA(key.PrivateKey)
+	keyBytes0 := crypto.FromECDSA(key.PrivateKey)
+	keyBytes := common.LeftPadBytes(keyBytes0, 32)
 
 	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	mac := Sha3(derivedKey[16:32], cipherText)
+	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
 
 	scryptParamsJSON := make(map[string]interface{}, 5)
 	scryptParamsJSON["n"] = scryptN
-	scryptParamsJSON["r"] = scryptr
-	scryptParamsJSON["p"] = scryptp
-	scryptParamsJSON["dklen"] = scryptdkLen
+	scryptParamsJSON["r"] = scryptR
+	scryptParamsJSON["p"] = scryptP
+	scryptParamsJSON["dklen"] = scryptDKLen
 	scryptParamsJSON["salt"] = hex.EncodeToString(salt)
 
 	cipherParamsJSON := cipherparamsJSON{
@@ -128,47 +150,44 @@ func (ks keyStorePassphrase) StoreKey(key *Key, auth string) (err error) {
 		key.Id.String(),
 		version,
 	}
-	keyJSON, err := json.Marshal(encryptedKeyJSONV3)
-	if err != nil {
-		return err
-	}
-
-	return writeKeyFile(key.Address, ks.keysDirPath, keyJSON)
+	return json.Marshal(encryptedKeyJSONV3)
 }
 
-func (ks keyStorePassphrase) DeleteKey(keyAddr common.Address, auth string) (err error) {
-	// only delete if correct passphrase is given
-	_, _, err = decryptKeyFromFile(ks.keysDirPath, keyAddr, auth)
-	if err != nil {
-		return err
-	}
-
-	return deleteKey(ks.keysDirPath, keyAddr)
-}
-
-func decryptKeyFromFile(keysDirPath string, keyAddr common.Address, auth string) (keyBytes []byte, keyId []byte, err error) {
+// DecryptKey decrypts a key from a json blob, returning the private key itself.
+func DecryptKey(keyjson []byte, auth string) (*Key, error) {
+	// Parse the json into a simple map to fetch the key version
 	m := make(map[string]interface{})
-	err = getKey(keysDirPath, keyAddr, &m)
-	if err != nil {
-		return
+	if err := json.Unmarshal(keyjson, &m); err != nil {
+		return nil, err
 	}
-
-	v := reflect.ValueOf(m["version"])
-	if v.Kind() == reflect.String && v.String() == "1" {
+	// Depending on the version try to parse one way or another
+	var (
+		keyBytes, keyId []byte
+		err             error
+	)
+	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
-		err = getKey(keysDirPath, keyAddr, &k)
-		if err != nil {
-			return
+		if err := json.Unmarshal(keyjson, k); err != nil {
+			return nil, err
 		}
-		return decryptKeyV1(k, auth)
+		keyBytes, keyId, err = decryptKeyV1(k, auth)
 	} else {
 		k := new(encryptedKeyJSONV3)
-		err = getKey(keysDirPath, keyAddr, &k)
-		if err != nil {
-			return
+		if err := json.Unmarshal(keyjson, k); err != nil {
+			return nil, err
 		}
-		return decryptKeyV3(k, auth)
+		keyBytes, keyId, err = decryptKeyV3(k, auth)
 	}
+	// Handle any decryption errors and return the key
+	if err != nil {
+		return nil, err
+	}
+	key := crypto.ToECDSA(keyBytes)
+	return &Key{
+		Id:         uuid.UUID(keyId),
+		Address:    crypto.PubkeyToAddress(key.PublicKey),
+		PrivateKey: key,
+	}, nil
 }
 
 func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, err error) {
@@ -201,9 +220,9 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 		return nil, nil, err
 	}
 
-	calculatedMAC := Sha3(derivedKey[16:32], cipherText)
+	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
 	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, nil, errors.New("Decryption failed: MAC mismatch")
+		return nil, nil, ErrDecrypt
 	}
 
 	plainText, err := aesCTRXOR(derivedKey[:16], cipherText, iv)
@@ -235,12 +254,12 @@ func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 		return nil, nil, err
 	}
 
-	calculatedMAC := Sha3(derivedKey[16:32], cipherText)
+	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
 	if !bytes.Equal(calculatedMAC, mac) {
-		return nil, nil, errors.New("Decryption failed: MAC mismatch")
+		return nil, nil, ErrDecrypt
 	}
 
-	plainText, err := aesCBCDecrypt(Sha3(derivedKey[:16])[:16], cipherText, iv)
+	plainText, err := aesCBCDecrypt(crypto.Keccak256(derivedKey[:16])[:16], cipherText, iv)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -254,11 +273,7 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 		return nil, err
 	}
 	dkLen := ensureInt(cryptoJSON.KDFParams["dklen"])
-    
 
-    //        return nil, errors.New( "test ") //DEBUG
-    //println( "cryptoJSON.KDF:", cryptoJSON.KDF )
-    
 	if cryptoJSON.KDF == "scrypt" {
 		n := ensureInt(cryptoJSON.KDFParams["n"])
 		r := ensureInt(cryptoJSON.KDFParams["r"])
@@ -269,13 +284,13 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 		c := ensureInt(cryptoJSON.KDFParams["c"])
 		prf := cryptoJSON.KDFParams["prf"].(string)
 		if prf != "hmac-sha256" {
-			return nil, fmt.Errorf("Unsupported PBKDF2 PRF: ", prf)
+			return nil, fmt.Errorf("Unsupported PBKDF2 PRF: %s", prf)
 		}
 		key := pbkdf2.Key(authArray, salt, c, dkLen, sha256.New)
 		return key, nil
 	}
 
-	return nil, fmt.Errorf("Unsupported KDF: ", cryptoJSON.KDF)
+	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
 }
 
 // TODO: can we do without this when unmarshalling dynamic JSON?

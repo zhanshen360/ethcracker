@@ -1,10 +1,11 @@
-package crypto
+package accounts
 
 import ( 
     "encoding/json"
     "os"
     "fmt"
     "time"
+    "github.com/ethereum/go-ethereum/crypto"
     //"io/ioutil"
 //    "github.com/pborman/uuid"
 	"errors"
@@ -176,15 +177,15 @@ func Test_pass_presale( params *CrackerParams, password string ) error {
 	if err != nil {
 		return err
 	}
-	ethPriv := Sha3(plainText)
-	ecKey := ToECDSA(ethPriv)
+	ethPriv := crypto.Keccak256(plainText) // Sha3(plainText)
+	ecKey := crypto.ToECDSA(ethPriv)
 //	key = &Key {
 //		Id:         nil,
 //		Address:    PubkeyToAddress( ecKey.PublicKey),
 //		PrivateKey: ecKey,
 //	}
 	
-    Address := PubkeyToAddress( ecKey.PublicKey)
+    Address := crypto.PubkeyToAddress( ecKey.PublicKey)
     
     
 //	derivedAddr := hex.EncodeToString(key.Address.Bytes()) // needed because .Hex() gives leading "0x"
