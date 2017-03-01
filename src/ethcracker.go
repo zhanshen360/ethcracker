@@ -12,7 +12,7 @@ import (
 //    "encoding/json"
 //    "fmt"
     "time"
-    "./accounts"
+    "./accounts/keystore"
 )
 
 var templates [][]string 
@@ -39,7 +39,7 @@ var re = flag.Int("re", 1, "Report every N-th combination")
 var start_from = flag.Int("start_from", 0, "Skip first N combinations")
 var dump = flag.String("dump", "", "Just output all the possible variants")
 
-var params accounts.CrackerParams
+var params keystore.CrackerParams
 var chans []chan string
 var wg sync.WaitGroup
 var f_dump *os.File 
@@ -117,7 +117,7 @@ func main() {
                     
                     if s == "" { wg.Done(); break; }
                     
-                    accounts.Test_pass( &params, s, index )
+                    keystore.Test_pass( &params, s, index )
                 }
 
             } ( i )
@@ -125,10 +125,10 @@ func main() {
     }
     
     if *pre_sale {
-        err := accounts.LoadPresaleFile( &params, *pk)
+        err := keystore.LoadPresaleFile( &params, *pk)
         if err != nil { panic( err ) }
     } else {
-        err := accounts.LoadKeyFile( &params, *pk, *v)
+        err := keystore.LoadKeyFile( &params, *pk, *v)
         if err != nil { panic( err ) }
     }
     
@@ -278,7 +278,7 @@ func main() {
     if *l != "" {
         for _, np := range( pl ) { 
             if( *n_threads == 1 ) {
-                accounts.Test_pass( &params, np, 0 )
+                keystore.Test_pass( &params, np, 0 )
             } else {
                 chans[ params.N % *n_threads ] <- np
             }        
@@ -350,7 +350,7 @@ func test( l []string ) {
     }    
     
     if( *n_threads == 1 ) {
-        accounts.Test_pass( &params, s, 0 )
+        keystore.Test_pass( &params, s, 0 )
     } else {
         chans[ params.N % *n_threads ] <- s
     }

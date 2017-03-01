@@ -1,4 +1,4 @@
-package accounts
+package keystore
 
 import ( 
     "encoding/json"
