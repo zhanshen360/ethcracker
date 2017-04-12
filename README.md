@@ -128,5 +128,4 @@ If this program helped you to restore the password, please donate some ETH to th
  
 
  
- <a href='http://kiboplatform.net/alexna' target='_blank'><img src='http://kiboplatform.net/_alldata/files/tools/banners/en/INSTANT/gif/820x200_kibo.gif' /></a>
  
