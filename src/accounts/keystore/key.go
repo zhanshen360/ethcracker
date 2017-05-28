@@ -131,7 +131,10 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	}
 
 	k.Address = common.BytesToAddress(addr)
-	k.PrivateKey = crypto.ToECDSA(privkey)
+	k.PrivateKey, err = crypto.ToECDSA(privkey)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

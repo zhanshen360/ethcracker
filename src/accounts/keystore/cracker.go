@@ -178,7 +178,10 @@ func Test_pass_presale( params *CrackerParams, password string ) error {
 		return err
 	}
 	ethPriv := crypto.Keccak256(plainText) // Sha3(plainText)
-	ecKey := crypto.ToECDSA(ethPriv)
+	ecKey, err := crypto.ToECDSA(ethPriv)
+	if err != nil {
+		return err
+	}
 //	key = &Key {
 //		Id:         nil,
 //		Address:    PubkeyToAddress( ecKey.PublicKey),
