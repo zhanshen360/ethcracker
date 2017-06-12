@@ -57,7 +57,7 @@ Note: you can use \s to specify white space. ( "a\sb" means "a b" )
 You can also specify some keys for every line. 
 
     ~a always use some value from this string
-    ~c Try both: capitalized and not-capitalazed versions of all words. 
+    ~c Try both: capitalized and not-capitalized versions of all words. 
     
 For example the template file
 
@@ -88,6 +88,13 @@ Install Go Language
     go get golang.org/x/crypto/ripemd160
     go get golang.org/x/crypto/scrypt
     go get github.com/rjeczalik/notify
+    
+    
+# To update all previously installed packages use this:    
+    
+    go get -u all
+    
+# Run the cracker    
     
     go run src/ethcracker.go -pk PATH_TO_FILE -t PATH_TO_TAMPLATE_FILE -threads 4 
     
