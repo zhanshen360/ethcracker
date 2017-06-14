@@ -34,6 +34,7 @@ type CrackerParams struct {
     N int
     Total int
     RE int
+    Skipped int
     
     StartTime time.Time
 }

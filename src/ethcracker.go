@@ -284,6 +284,7 @@ func main() {
             }        
         }
     } else {
+        
         indexes = make( []int, len( templates ) )
         for i := 0; i < len( indexes ); i++ {
             if  templates_flags[i].UseAlways { indexes[i] = 1 }
@@ -334,15 +335,23 @@ func main() {
         wg.Wait()        
     }
            
-    if *v > 0 { println( ":-( Sorry... password not found") }
+    if *v > 0 { 
+        println( ":-( Sorry... password not found") 
+        if params.Skipped > 0  { 
+            println( "NOTE:", params.Skipped, "variants skipped because of length limitations") 
+        }
+    }
 } 
 
 func test( l []string ) {
     s := ""
     for _, n := range( l ) { s = s + n }
 
-    if len(s) < *min_len { return }
-    if len(s) > *max_len { return }
+    
+    if s == "" { return }
+    
+    if len(s) < *min_len { params.Skipped = params.Skipped + 1; return }
+    if len(s) > *max_len { params.Skipped = params.Skipped + 1; return }
     
     if *dump != "" {
         f_dump.Write( []byte( s + "\n" ) )
