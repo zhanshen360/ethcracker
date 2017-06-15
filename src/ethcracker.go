@@ -78,7 +78,7 @@ func main() {
     
     if *v > 0 {
         println( "------------------------------------------------")
-        println( "Ethereum Password Cracker v2.0")
+        println( "Ethereum Password Cracker v2.1")
         println( "Author: @AlexNa ")
         println( "------------------------------------------------")
         println( "Private Key File:", *pk )
