@@ -129,7 +129,7 @@ func Test_pass( params *CrackerParams, s string, thread int ) error {
         }
     }
     mutex.Unlock()
-    if params.N < params.Start_from { return errors.New( "skipped") }
+    if params.N + params.Skipped < params.Start_from { return errors.New( "skipped") }
     
     
     switch params.key_version {
