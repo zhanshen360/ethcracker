@@ -110,20 +110,21 @@ func Test_pass( params *CrackerParams, s string, thread int ) error {
     
     mutex.Lock()
     params.N++
-    if params.V > 0 && params.N >= params.Start_from && params.N - params.Start_from > 0 {
+    if params.V > 0 && params.N >= params.Start_from && params.N + params.Skipped - params.Start_from > 0 {
 //        println( "TH" + strconv.Itoa( thread ) + "-> #" +  strconv.Itoa( params.N ) + "/" + params.Total + 
 //                " " + strconv.Itoa( thread ) : ", s )
         
-        ns_left := time.Since( params.StartTime ).Nanoseconds() * 
-            int64( params.Total - params.N ) / int64 ( params.N - params.Start_from ) 
-      
+        h := time.Since( params.StartTime ).Hours() * 
+        float64( params.Total - ( params.N + params.Skipped) ) / float64 ( params.N + params.Skipped - params.Start_from ) 
+        
         if params.N % params.RE == 0 {
-            fmt.Printf( "TH%d-> #%d/%d %d%% Left: %v %v\n", 
+            fmt.Printf( "TH%d-> %d/%d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes %v\n", 
                        thread, 
-                       params.N, 
+                       params.N + params.Skipped, 
                        params.Total, 
-                       params.N * 100 / params.Total, 
-                       time.Duration( ns_left ),
+                       ( params.N + params.Skipped ) * 100 / params.Total, 
+                       params.Skipped,
+                       int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60,
                        s );
         }
     }
