@@ -9,8 +9,9 @@ import (
     "sync"
     "strings"
     "unicode"
+    "strconv"
 //    "encoding/json"
-//    "fmt"
+    "fmt"
     "time"
     "./accounts/keystore"
 )
@@ -36,7 +37,7 @@ var pre_sale = flag.Bool("presale", false, "The key file is the presale JSON")
 var keep_order = flag.Bool("keep_order", false, "Keep order of the lines (no permutations)")
 var v = flag.Int("v", 1, "Verbosity ( 0, 1, 2 )")
 var re = flag.Int("re", 1, "Report every N-th combination")
-var start_from = flag.Int("start_from", 0, "Skip first N combinations")
+var start_from = flag.String("start_from", "0", "Skip first N combinations")
 var dump = flag.String("dump", "", "Just output all the possible variants")
 
 var params keystore.CrackerParams
@@ -78,7 +79,7 @@ func main() {
     
     if *v > 0 {
         println( "------------------------------------------------")
-        println( "Ethereum Password Cracker v2.11")
+        println( "Ethereum Password Cracker v2.12")
         println( "Author: @AlexNa ")
         println( "------------------------------------------------")
         println( "Private Key File:", *pk )
@@ -96,7 +97,9 @@ func main() {
     if *v > 0 { println( "Report every :", *re, "combination") }
     
     params.V = *v
-    params.Start_from = *start_from
+    
+    
+    
     params.StartTime = time.Now()
     params.RE = *re
     
@@ -272,6 +275,22 @@ func main() {
     }
     
     if *v > 0 { println( "Total possible variants:", params.Total) }
+
+    if strings.HasSuffix( *start_from, "%" ) {
+        
+        p, err := strconv.Atoi( (*start_from)[ :len( *start_from )-1 ] )
+        if err != nil { panic( "Wrong start_from percents: " + *start_from )}
+        
+        if( p < 0 || p >=100 ) { panic( "Wrong start_from percents: " + *start_from )}
+        
+        params.Start_from = params.Total * p / 100;
+    } else {
+        n, err := strconv.Atoi( *start_from )
+        if err != nil  { panic( "Wrong start_from: " + *start_from )}
+        
+        params.Start_from = n
+    }
+    
     if *v > 0 { println( "---------------- STARTING ----------------------") }
 
     //main cycle
@@ -350,8 +369,23 @@ func test( l []string ) {
     
     if s == "" { return }
     
-    if len(s) < *min_len { params.Skipped = params.Skipped + 1; return }
-    if len(s) > *max_len { params.Skipped = params.Skipped + 1; return }
+    if len(s) < *min_len || len(s) > *max_len { 
+        params.Skipped = params.Skipped + 1; 
+        
+        h := time.Since( params.StartTime ).Hours() * 
+        float64( params.Total - ( params.N + params.Skipped) ) / float64 ( params.N + params.Skipped - params.Start_from ) 
+
+        if ( params.N + params.Skipped ) % ( params.RE * 10 ) == 0 {
+            fmt.Printf( "-----> %d/%d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes \n", 
+                       params.N + params.Skipped, 
+                       params.Total, 
+                       ( params.N + params.Skipped ) * 100 / params.Total, 
+                       params.Skipped,
+                       int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60 );
+        }
+        
+        return 
+    }
     
     if *dump != "" {
         f_dump.Write( []byte( s + "\n" ) )

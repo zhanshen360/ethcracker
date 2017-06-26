@@ -127,7 +127,22 @@ func Test_pass( params *CrackerParams, s string, thread int ) error {
                        int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60,
                        s );
         }
+    } else {
+        if params.Start_from > 0 && params.N % ( 100000 ) == 0 {
+
+            h := time.Since( params.StartTime ).Hours() * 
+            float64( params.Start_from - params.N ) / float64 ( params.Start_from ) 
+            
+            fmt.Printf( "Skipping first %d -> %d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes %v\n", 
+                       params.Start_from, 
+                       params.N, 
+                       ( params.N + params.Skipped ) * 100 / params.Start_from, 
+                       params.Skipped,
+                       int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60,
+                       s );
+        }
     }
+    
     mutex.Unlock()
     if params.N + params.Skipped < params.Start_from { return errors.New( "skipped") }
     

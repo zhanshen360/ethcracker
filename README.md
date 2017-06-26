@@ -21,7 +21,7 @@ https://gitter.im/lexansoft/ethcracker
     -presale  for cracking prelase JSON file
     -threads Number of threads
     -v Verbosity ( 0, 1, 2 )
-    -start_from Skip first N combinations
+    -start_from Skip first N combinations ( you can specify N as percentage. F.e. : 30% )
     -keep_order Keep the order of the lines ( no permutations )
     -re Report every N-th combination
     -dump path Just dump all the variants into text file
