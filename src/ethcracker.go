@@ -375,7 +375,8 @@ func test( l []string ) {
         h := time.Since( params.StartTime ).Hours() * 
         float64( params.Total - ( params.N + params.Skipped) ) / float64 ( params.N + params.Skipped - params.Start_from ) 
 
-        if ( params.N + params.Skipped ) % ( params.RE * 10 ) == 0 {
+        if ( params.N + params.Skipped ) > params.Start_from && 
+           ( params.N + params.Skipped ) % ( params.RE * 10 ) == 0 {
             fmt.Printf( "-----> %d/%d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes \n", 
                        params.N + params.Skipped, 
                        params.Total, 
