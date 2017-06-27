@@ -79,7 +79,7 @@ func main() {
     
     if *v > 0 {
         println( "------------------------------------------------")
-        println( "Ethereum Password Cracker v2.12")
+        println( "Ethereum Password Cracker v2.13")
         println( "Author: @AlexNa ")
         println( "------------------------------------------------")
         println( "Private Key File:", *pk )
@@ -325,7 +325,18 @@ func main() {
             if *keep_order {
                 test( letters )
             } else {
-                AllPermutations( letters, 0 )
+                
+                s := ""
+                for _, n := range( letters ) { s = s + n }
+                if len(s) > *max_len { 
+                    N := fact( len( letters ) )
+                    params.Skipped = params.Skipped + N 
+                    
+                    if params.V > 1 { fmt.Printf( "Skipped %d too long variants\n", N ) }
+                    
+                } else {
+                    AllPermutations( letters, 0 )
+                }
             }
 
             for i := 0; i < len( indexes ); i++ {
@@ -375,14 +386,25 @@ func test( l []string ) {
         h := time.Since( params.StartTime ).Hours() * 
         float64( params.Total - ( params.N + params.Skipped) ) / float64 ( params.N + params.Skipped - params.Start_from ) 
 
-        if ( params.N + params.Skipped ) > params.Start_from && 
-           ( params.N + params.Skipped ) % ( params.RE * 10 ) == 0 {
-            fmt.Printf( "-----> %d/%d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes \n", 
-                       params.N + params.Skipped, 
-                       params.Total, 
-                       ( params.N + params.Skipped ) * 100 / params.Total, 
-                       params.Skipped,
-                       int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60 );
+        if params.N + params.Skipped > params.Start_from {
+            if params.Start_from > 0 && ( params.N + params.Skipped ) % ( 100000 ) == 0 {
+                fmt.Printf( "Skipping first %d -> %d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes %v\n", 
+                           params.Start_from, 
+                           params.N + params.Skipped, 
+                           ( params.N + params.Skipped ) * 100 / params.Start_from, 
+                           params.Skipped,
+                           int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60,
+                           s );            
+            }
+        } else {
+            if ( params.N + params.Skipped ) % ( params.RE * 10 ) == 0 {
+                fmt.Printf( "-----> %d/%d %d%% Skipped: %d Left: %d years %d days %d hours %d minutes \n", 
+                           params.N + params.Skipped, 
+                           params.Total, 
+                           ( params.N + params.Skipped ) * 100 / params.Total, 
+                           params.Skipped,
+                           int64( h ) / (24 * 365), ( int64( h ) % (24 * 365) ) / 24, int64( h ) % 24, int64( h * 60 ) % 60 );
+            }
         }
         
         return 
