@@ -96,7 +96,7 @@ Install Go Language
     
 # Run the cracker    
     
-    go run src/ethcracker.go -pk PATH_TO_FILE -t PATH_TO_TAMPLATE_FILE -threads 4 
+    go run src/ethcracker.go -pk PATH_TO_FILE -t PATH_TO_TEMPLATE_FILE -threads 4 
     
 # Installing on Windows 
 
