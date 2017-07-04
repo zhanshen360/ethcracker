@@ -79,7 +79,7 @@ func main() {
     
     if *v > 0 {
         println( "------------------------------------------------")
-        println( "Ethereum Password Cracker v2.13")
+        println( "Ethereum Password Cracker v2.14")
         println( "Author: @AlexNa ")
         println( "------------------------------------------------")
         println( "Private Key File:", *pk )
@@ -179,7 +179,7 @@ func main() {
                 
                 var tf TEMP_FLAGS
                 
-                if strings.HasPrefix( templ[0], "~" ) {
+                if len( templ ) > 0 && strings.HasPrefix( templ[0], "~" ) {
                     if len( templ ) == 1 { continue } //nothing but flags...
                     
                     tf.UseAlways = strings.Index( templ[0], "a" ) > 0
@@ -200,9 +200,10 @@ func main() {
                     }                    
                 }
                 
-
-                templates = append( templates, templ ) 
-                templates_flags = append( templates_flags, tf ) 
+                if len( templ ) > 0 { 
+                    templates = append( templates, templ ) 
+                    templates_flags = append( templates_flags, tf ) 
+                }
                 
                 //println( "templates_flags:", len( templates_flags ) - 1, tf.UseAlways ) 
             }
