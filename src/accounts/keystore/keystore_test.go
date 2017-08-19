@@ -1,4 +1,4 @@
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2017 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -296,8 +296,8 @@ func TestWalletNotifications(t *testing.T) {
 			}
 			select {
 			case event := <-updates:
-				if !event.Arrive {
-					t.Errorf("departure event on account creation")
+				if event.Kind != accounts.WalletArrived {
+					t.Errorf("non-arrival event on account creation")
 				}
 				if event.Wallet.Accounts()[0] != account {
 					t.Errorf("account mismatch on created wallet: have %v, want %v", event.Wallet.Accounts()[0], account)
@@ -319,8 +319,8 @@ func TestWalletNotifications(t *testing.T) {
 			}
 			select {
 			case event := <-updates:
-				if event.Arrive {
-					t.Errorf("arrival event on account deletion")
+				if event.Kind != accounts.WalletDropped {
+					t.Errorf("non-drop event on account deletion")
 				}
 				if event.Wallet.Accounts()[0] != account {
 					t.Errorf("account mismatch on deleted wallet: have %v, want %v", event.Wallet.Accounts()[0], account)
