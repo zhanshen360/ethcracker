@@ -157,7 +157,7 @@ func Test_pass( params *CrackerParams, s string, thread int ) error {
         println( "" )            
         println( "" )            
         println( "-------------------------------------------------------------------------" )            
-        println( "              CONGRATULATION !!! WE FOUND YOUR PASSWORD !!!" )            
+        println( "              CONGRATULATIONS !!! WE FOUND YOUR PASSWORD !!!" )            
         println( "-------------------------------------------------------------------------" )            
         println( "" )            
         println( "                  Password:", s )            
