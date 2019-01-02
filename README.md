@@ -111,7 +111,7 @@ Then install git, golang and mingw
 After that make all the steps from the Installing section.    
     
 # Cracking your Mac DMG file password
-You you stored your keys in the encrypted mac DMG image and forgot the password, do this:
+If you stored your keys in the encrypted mac DMG image and forgot the password, do this:
 
 1. dump all the possible variants of your password into a file
 
